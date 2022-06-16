@@ -9,7 +9,31 @@ class Store {
 
     this._mutation = options.mutations;
     this._action = options.actions;
-    this._getter = options.getters;
+    this._wrappedGetters = options.getters;
+
+    // 定义computed选项
+    const computed = [];
+
+    // 挂在store上, 可以通过$store.getters获取
+    this.getters = {};
+
+    const store = this;
+
+    //
+    Object.keys(this._wrappedGetters).forEach((key) => {
+      // 获取用户定义的getters
+      const fn = store._wrappedGetters[key];
+
+      // 转化为computed可以使用的无参数形式
+      computed[key] = function () {
+        return fn(store.state);
+      };
+
+      // 为getters定义只读属性
+      Object.defineProperty(store.getters, key, {
+        get: () => store._vm[key],
+      });
+    });
 
     // 实现通过vue实例, 实现state的响应式
     this._vm = new Vue({
@@ -18,6 +42,7 @@ class Store {
           $$state: options.state,
         };
       },
+      computed,
     });
 
     // 将commit和dispatch绑定到this
